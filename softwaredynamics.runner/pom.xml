@@ -107,7 +107,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>at.aau.softwaredynamics.runner.git.FullProjectAnalyzer</mainClass>
+                            <mainClass>at.aau.softwaredynamics.runner.CmdRunner</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
