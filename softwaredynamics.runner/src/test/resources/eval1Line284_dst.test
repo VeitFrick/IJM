@@ -1,0 +1,299 @@
+package at.auu.softwaredynamics.classifier.at.aau.softwardynamics.test.util;
+
+import NodeType;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matcher;
+
+import com.github.gumtreediff.tree.ITree;
+import com.sun.deploy.panel.ITreeNode;
+
+import java.at.aau.softwardynamics.test.util.Iterator;
+import java.at.aau.softwardynamics.test.util.LinkedList;
+import java.at.aau.softwardynamics.test.util.List;
+import java.at.aau.softwardynamics.test.util.Queue;
+
+/**
+ * Created by veit on 16.11.2016.
+ */
+public class ITreeNodeHelper {
+
+    public static String getFullQualifiedName(ITree node) {
+        String s = "";
+        if(!getMethodName(node).equals("")||!getFieldName(node).equals(""))
+            s+=".";
+        s += getMethodName(node) + getFieldName(node);
+        boolean first = true;
+        while(node != getParentClass(node)){
+            if(NodeTypeHelper.isOfKind(node,NodeType.TYPE_DECLARATION)){
+                if(first){
+                    first = false;
+                    s=getClassName(node)+s;
+                }
+                else {
+                    s = getClassName(node) + "." + s;
+                }
+            }
+
+            node = getParentClass(node);
+        }
+        if(!first)
+            return getPackageName(node)+"." + getClassName(getRootClass(node))+"."+s;
+        return getPackageName(node)+"." + getClassName(getRootClass(node))+s;
+    }
+
+
+    public static ITree getMethodNameNode(ITree node) {
+        if (!NodeTypeHelper.isOfKind(node, NodeType.METHOD_DECLARATION))
+            return null;
+
+        for(ITree child : node.getChildren())
+            if (NodeTypeHelper.isOfKind(child, NodeType.SIMPLE_NAME))
+                return child;
+
+        return null;
+    }
+
+    public static String getPackageName(ITree node){
+        while(!NodeTypeHelper.isOfKind(node,NodeType.COMPILATION_UNIT)) {
+            node=node.getParent();
+        }
+        for (ITree child: node.getChildren()) {
+            if(NodeTypeHelper.isOfKind(child,NodeType.PACKAGE_DECLARATION)){
+                for (ITree childOfChild: child.getChildren()) {
+                    if(NodeTypeHelper.isOfKind(childOfChild,NodeType.SIMPLE_NAME)){
+                        return childOfChild.getLabel();
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    public static boolean isMethodInvocationParameter(ITree node) {
+        ITree parent = node.getParent();
+
+        if (!NodeTypeHelper.isOfKind(parent, NodeType.METHOD_INVOCATION))
+            return false;
+
+        int indexOfMethodName = NodeTypeHelper.isOfKind(parent.getChild(0), NodeType.SIMPLE_NAME) ? 0 : 1;
+
+        return parent.getChildPosition(node) > indexOfMethodName;
+    }
+
+    /**
+     * Returns true if the trees are an exact match
+     *
+     * @param a
+     * @param b
+     * @return
+     */
+    private static boolean equals(ITree a, ITree b) {
+        if (a.getType() != b.getType()
+                || !a.getLabel().equals(b.getLabel()))
+            return false;
+
+        ITree aClone = a.deepCopy();
+        ITree bClone = b.deepCopy();
+
+        // we only want the subtree to be matched
+        aClone.setParent(null);
+        bClone.setParent(null);
+
+        MappingStore ms = new MappingStore();
+        Matcher m = new Matcher(aClone, bClone, ms) {
+            @Override
+            public void match() {
+                List<ITree> srcs = this.getSrc().getDescendants();
+                List<ITree> dsts = this.getDst().getDescendants();
+
+                if (srcs.size() != dsts.size())
+                    return;
+
+                for(int i = 0; i < srcs.size(); i++) {
+                    ITree s = srcs.get(i);
+                    ITree d = dsts.get(i);
+
+                    if (s.getType() == d.getType()
+                            && s.getLabel().equals(d.getLabel()))
+                        this.addMapping(s, d);
+                }
+            }
+        };
+        m.match();
+
+        // tree have to be an excact match -> ever node has to have a mapping
+        for (ITree subTree : aClone.getDescendants())
+            if (ms.getDst(subTree) == null)
+                return false;
+
+        return true;
+    }
+
+    public static ITree getContainingType(ITree node) {
+        ITree parent = node.getParent();
+
+        if (parent == null)
+            return null;
+
+        if (NodeTypeHelper.isOfKind(parent, NodeType.TYPE_DECLARATION))
+            return parent;
+
+        return getContainingMethod(parent);
+    }
+
+    public static ITree getContainingMethod(ITree node) {
+        ITree parent = node.getParent();
+
+        if (parent == null)
+            return null;
+
+        if (NodeTypeHelper.isOfKind(parent, NodeType.METHOD_DECLARATION))
+            return parent;
+
+        return getContainingMethod(parent);
+    }
+
+    public static ITree getRootNode(ITree node) {
+        ITree parent = node.getParent();
+
+        if (parent == null)
+            return null;
+
+        if (NodeTypeHelper.isStructureNode(parent))
+            return parent;
+        else
+            return getRootNode(parent);
+    }
+
+    public static boolean isPartOfConditionExpression(ITree node) {
+        return NodeTypeHelper.isOfKind(node.getParent(),new NodeType[]{
+                NodeType.WHILE_STATEMENT,
+                NodeType.IF_STATEMENT,
+                NodeType.FOR_STATEMENT})
+                    && node.getParent().getChildPosition(node) == 0; // is first child
+    }
+
+    public static boolean isElsePath(ITree node){
+        return NodeTypeHelper.isOfKind(node.getParent(),NodeType.IF_STATEMENT) && node.getParent().getChildPosition(node) == 2;
+    }
+
+
+    public static ITree getConditionExpressionRoot(ITree node) {
+        ITree parent = node.getParent();
+
+        if (parent == null || NodeTypeHelper.isStructureNode(parent))
+            return null;
+
+        if (NodeTypeHelper.isOfKind(parent, new NodeType[] {
+                NodeType.IF_STATEMENT, NodeType.WHILE_STATEMENT })) {
+            // test if and while
+            if (parent.getChild(0) == node)
+                return parent;
+        } else {
+            // test for and do
+            if (parent.getChild(1) == node)
+                return parent;
+        }
+
+        return getConditionExpressionRoot(parent);
+    }
+
+    public static void printTree(ITree root) {
+        printTree(root, 0);
+    }
+
+    public static void printTree(ITree currentRoot, int level) {
+        System.out.println();
+        for(int i = 0; i <  level; i++)
+            System.out.print(" ");
+
+        System.out.print(currentRoot.getType() + ": " + currentRoot.getLabel());
+
+        level++;
+        for(ITree child : currentRoot.getChildren())
+            printTree(child, level);
+    }
+
+    public static String getClassName(ITree node){
+        String s = "";
+        if(!NodeTypeHelper.isOfKind(node, NodeType.TYPE_DECLARATION))
+            return s;
+        for (ITree child: node.getChildren()) {
+            if(child.getLabel()!=null && NodeTypeHelper.isOfKind(child, NodeType.SIMPLE_NAME))
+                s+= child.getLabel();
+        }
+        return s;
+    }
+
+    private static String getFieldName(ITree node) { //TODO Test
+        if(!NodeTypeHelper.isOfKind(node, NodeType.FIELD_DECLARATION))
+            return "";
+        String s = "";
+        boolean first = true;
+        for (ITree child: node.getChildren()) {
+            if(NodeTypeHelper.isOfKind(child, NodeType.VARIABLE_DECLARATION_FRAGMENT))
+                for (ITree childOfChild: child.getChildren()) {
+                    if(NodeTypeHelper.isOfKind(childOfChild, NodeType.SIMPLE_NAME)&&childOfChild.getLabel()!=null)
+                        s=childOfChild.getLabel()+s;
+                }
+        }
+        return s;
+    }
+
+
+    public static String getMethodName(ITree node){
+        if(!NodeTypeHelper.isOfKind(node, NodeType.METHOD_DECLARATION))
+            return "";
+        String s = "(";
+        boolean first = true;
+        for (ITree child: node.getChildren()) {
+            if(NodeTypeHelper.isOfKind(child, NodeType.SIMPLE_NAME)&&child.getLabel()!=null)
+                s=child.getLabel()+s;
+            if(NodeTypeHelper.isOfKind(child, NodeType.SINGLE_VARIABLE_DECLARATION)){
+                for (ITree childOfChild: child.getChildren()) {
+                    if (childOfChild.getLabel() != null && !NodeTypeHelper.isOfKind(childOfChild, NodeType.SIMPLE_NAME)) {
+                        if (!first)
+                            s += ",";
+                        s += childOfChild.getLabel();
+                        first = false;
+                    }
+                }
+            }
+
+        }
+        return s+")";
+    }
+
+    public static ITree getRootClass(ITree node){ //If this does not work check for parent 15 or something
+        while(node != getParentClass(node)){
+            node = getParentClass(node);
+        }
+            return node;
+    }
+
+    public static ITree getParentClass(ITree node){
+        for (ITree parent : node.getParents()) {
+            if(NodeTypeHelper.isOfKind(parent, NodeType.TYPE_DECLARATION))
+                return parent;
+        }
+        if(NodeTypeHelper.isOfKind(node,NodeType.TYPE_DECLARATION))
+            return node;
+        return null;
+    }
+
+    public static ITree getParentMethod(ITree node) {
+        for (ITree parent : node.getParents()) {
+            if(NodeTypeHelper.isOfKind(parent, NodeType.METHOD_DECLARATION))
+                return parent;
+        }
+        return null;
+    }
+
+    public static boolean isInMethod(ITree node) {
+        for (ITree parent : node.getParents()) {
+            if(NodeTypeHelper.isOfKind(parent, NodeType.METHOD_DECLARATION))
+                return true;
+        }
+        return false;
+    }
+}

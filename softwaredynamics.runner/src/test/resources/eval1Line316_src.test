@@ -1,0 +1,47 @@
+package files;
+
+import java.at.aau.softwardynamics.test.util.ArrayList;
+import java.at.aau.softwardynamics.test.util.List;
+
+/**
+ * Created by veit on 22.11.2016.
+ */
+public class ExportHandler {
+    private String filePath =  "C:\\Users\\Dummy\\Desktop\\bla";
+    private String fileName = "hmm";
+    private String extension = "txt";
+
+    public FileHandler fileHandler = new FileHandler(filePath, extension);
+    private List<String> lines = new ArrayList<String>();
+
+    public void appendLine(String s){
+        lines.add(s);
+    }
+
+    public void writeToFile(){
+        if(fileHandler.writeToFileNoOverride(fileName,lines)){
+            return;
+        }
+        String tempFileName;
+        for(int i = 0; i<= 9; i++){
+            tempFileName = fileName +i;
+            for(int j = 0; j<= 9; j++){
+                if(fileHandler.writeToFileNoOverride(tempFileName+j,lines)){
+                    return;
+                }
+            }
+        }
+
+    }
+
+    public static void main(String[] args) {
+        ExportHandler eh = new ExportHandler();
+        System.out.println(eh.fileHandler.getFilePath());
+        eh.appendLine("Hello World!");
+        eh.appendLine("Does");
+        eh.appendLine("This");
+        eh.appendLine("Work?");
+        eh.writeToFile();
+
+    }
+}

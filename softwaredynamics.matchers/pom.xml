@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <repositories>
+        <!--other repositories if any-->
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/../repo</url>
+        </repository>
+    </repositories>
+
+    <parent>
+        <artifactId>softwaredynamics</artifactId>
+        <groupId>at.aau.softwaredynamics</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>at.aau.softwaredynamics.matchers</artifactId>
+
+    <dependencies>
+
+        <!-- use custom GT impl -->
+        <dependency>
+            <groupId>com.github.gumtreediff</groupId>
+            <artifactId>core</artifactId>
+            <version>2.1.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.gumtreediff</groupId>
+            <artifactId>gen.jdt</artifactId>
+            <version>2.1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- spoon -->
+        <!--<dependency>-->
+            <!--<groupId>fr.inria.gforge.spoon.labs</groupId>-->
+            <!--<artifactId>gumtree-spoon-ast-diff</artifactId>-->
+            <!--<version>1.2</version>-->
+        <!--</dependency>-->
+        <!-- https://mvnrepository.com/artifact/fr.inria.gforge.spoon/spoon-core -->
+        <dependency>
+            <groupId>fr.inria.gforge.spoon</groupId>
+            <artifactId>spoon-core</artifactId>
+            <version>7.3.0</version>
+        </dependency>
+
+
+        <!-- https://mvnrepository.com/artifact/diff_match_patch/diff_match_patch -->
+        <!--<dependency>-->
+        <!--<groupId>diff_match_patch</groupId>-->
+        <!--<artifactId>diff_match_patch</artifactId>-->
+        <!--<version>current</version>-->
+        <!--</dependency>-->
+
+        <!-- dependencies needed for GT -->
+        <!--        <dependency>-->
+        <!--        <groupId>org.eclipse.tycho</groupId>-->
+        <!--        <artifactId>org.eclipse.jdt.core</artifactId>-->
+        <!--        <version>3.14.0.v20171206-0802</version>-->
+        <!--&lt;!&ndash;        <version>3.12.0.v20160516-2131</version>&ndash;&gt;-->
+        <!--        &lt;!&ndash;<version>3.13.50.v20171007-0855</version>&ndash;&gt;-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.eclipse.core</groupId>-->
+        <!--            <artifactId>runtime</artifactId>-->
+        <!--            <version>3.10.0-v20140318-2214</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.eclipse.birt.runtime</groupId>-->
+        <!--            <artifactId>org.eclipse.core.resources</artifactId>-->
+        <!--            <version>3.10.0.v20150423-0755</version>-->
+        <!--        </dependency>-->
+        <dependency>
+            <groupId>net.sf.trove4j</groupId>
+            <artifactId>trove4j</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.mpkorstanje</groupId>
+            <artifactId>simmetrics-core</artifactId>
+            <version>3.2.3</version>
+        </dependency>
+
+    </dependencies>
+
+</project>

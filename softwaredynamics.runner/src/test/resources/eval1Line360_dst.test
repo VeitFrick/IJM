@@ -1,0 +1,313 @@
+package at.auu.softwaredynamics.classifier;
+
+import ITreeNodeHelper;
+import NodeTypeHelper;
+import com.github.gumtreediff.actions.ActionGenerator;
+import com.github.gumtreediff.actions.model.*;
+import com.github.gumtreediff.matchers.*;
+import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeContext;
+
+import java.at.aau.softwardynamics.test.util.HashSet;
+import java.at.aau.softwardynamics.test.util.List;
+import java.at.aau.softwardynamics.test.util.Vector;
+
+/**
+ * Created by veit on 16.11.2016.
+ */
+public class JChangeClassifier {
+    private HashSet<ITree> processedNodes;
+    private MappingStore mappings;
+    private final boolean includeUnclassified;
+
+    public JChangeClassifier(boolean includeUnclassified) {
+        this.includeUnclassified = includeUnclassified;
+    }
+
+    public JChangeClassifier() {
+        this(false);
+    }
+
+    public List<SourceCodeChange> classify(TreeContext src, TreeContext dst) {
+//        System.setProperty("gumtree.match.gt.minh", "2");
+//        Matcher m = new CompositeMatchers.ClassicGumtree(src.getRoot(), dst.getRoot(), new MappingStore());
+        Matcher m = new OptimizedVersions.Gtabcde(src.getRoot(), dst.getRoot(), new MappingStore());
+        m.match();
+        mappings = m.getMappings();
+
+        ActionGenerator g = new ActionGenerator(src.getRoot(), dst.getRoot(), mappings);
+        g.generate();
+        List<Action> actions = g.getActions();
+
+        return classify(actions, mappings);
+    }
+
+    public List<SourceCodeChange> classify(List<Action> actions, MappingStore mappings) {
+        processedNodes = new HashSet<>();
+        List<SourceCodeChange> result = new Vector<>();
+        SourceCodeChange currentSCC = null;
+        for (Action a : actions) {
+            if (ignoreAction(a))
+                continue;
+            if (a instanceof Insert)
+                currentSCC = classifyInsert((Insert) a, mappings, processedNodes);
+            else if (a instanceof Update)
+                currentSCC = classifyUpdate((Update) a, mappings, processedNodes);
+            else if (a instanceof Delete)
+                currentSCC = classifyDelete((Delete) a, mappings, processedNodes);
+            else if (a instanceof Move)
+                currentSCC = classifyMove((Move) a, mappings, processedNodes);
+            if (currentSCC != null)
+                result.add(currentSCC);
+        }
+        return result;
+    }
+
+    private SourceCodeChange classifyMove(Move move, MappingStore mappings, HashSet<ITree> processedNodes) {
+        ITree node = move.getNode();
+        SourceCodeChange change = SourceCodeChange.Create(move, mappings);
+        {
+            if (NodeTypeHelper.isOfKind(node, NodeType.SINGLE_VARIABLE_DECLARATION)
+                    && NodeTypeHelper.isOfKind(node.getParent(), NodeType.METHOD_DECLARATION)) {
+                change.setChangeType(ChangeType.PARAMETER_ORDERING_CHANGE);
+            } else if (NodeTypeHelper.isStatement(node)) {
+                ITree dstNode = mappings.getDst(node);
+                if (node.getParent() == mappings.getSrc(dstNode.getParent())) {
+                    change.setChangeType(ChangeType.STATEMENT_ORDERING_CHANGE);
+                } else {
+                    // this should by a parent statement change but it does not work for large files
+                    change.setChangeType(ChangeType.STATEMENT_PARENT_CHANGE);
+                }
+            } else if (
+                    NodeTypeHelper.isOfKind(node, NodeType.BLOCK)       // move of BLOCK
+                    && node.getChildren().size() > 0                    // AND src BLOCK having at least one child
+                    && mappings.getDst(node).getChildren().size() > 0   // AND dst BLOCK having at least one child
+                    ) {
+                change.setChangeType(ChangeType.STATEMENT_PARENT_CHANGE);
+            }
+
+        }
+        return classifyDoLast(change, processedNodes);
+    }
+
+    private SourceCodeChange classifyDelete(Delete delete, MappingStore mappings, HashSet<ITree> processedNodes) {
+        ITree node = delete.getNode();
+        SourceCodeChange change = SourceCodeChange.Create(delete, mappings);
+
+        if (NodeTypeHelper.isOfKind(node, NodeType.TYPE_DECLARATION)) {
+            change.setChangeType(ChangeType.REMOVED_CLASS);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.METHOD_DECLARATION)) {
+            change.setChangeType(ChangeType.REMOVED_FUNCTIONALITY);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.FIELD_DECLARATION)) {
+            change.setChangeType(ChangeType.REMOVED_OBJECT_STATE);
+        }
+        else if(NodeTypeHelper.isOfKind(node,NodeType.METHOD_INVOCATION)){
+            change.setChangeType(ChangeType.METHOD_INVOCATION_DELETE);
+        }
+        else if(NodeTypeHelper.isOfKind(node,NodeType.CONSTRUCTOR_INVOCATION) || NodeTypeHelper.isOfKind(node, NodeType.CLASS_INSTANCE_CREATION)){
+            change.setChangeType(ChangeType.CONSTRUCTOR_INVOCATION_DELETE);
+        }
+        else if(ITreeNodeHelper.isElsePath(node)) {
+            change.setChangeType(ChangeType.ALTERNATIVE_PART_DELETE);
+        }
+        else if(NodeTypeHelper.isLoop(node)){
+            change.setChangeType(ChangeType.LOOP_STATEMENT_DELETE);
+        }
+        else if(ITreeNodeHelper.isMethodInvocationParameter(node)){
+            change.setChangeType(ChangeType.METHOD_INVOCATION_PARAMETER_DELETE);
+        }
+        else if(NodeTypeHelper.isOfKind(node.getParent(),NodeType.CONSTRUCTOR_INVOCATION)|| NodeTypeHelper.isOfKind(node.getParent(), NodeType.CLASS_INSTANCE_CREATION)){
+            change.setChangeType(ChangeType.CONSTRUCTOR_INVOCATION_PARAMETER_DELETE);
+        }
+        else if (NodeTypeHelper.isOfKind(change.getRootNode(), NodeType.METHOD_DECLARATION)){
+            if(NodeTypeHelper.isOfKind(node,NodeType.SINGLE_VARIABLE_DECLARATION)){
+                change.setChangeType(ChangeType.PARAMETER_DELETE);
+            }
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.SIMPLE_TYPE)){
+            if(NodeTypeHelper.isOfKind(node.getParent(),NodeType.TYPE_DECLARATION)
+                    && this.mappings.getDst(node.getParent()) != null // parent is not deleted
+                    ) {
+                if(NodeTypeHelper.isInterface(node))
+                    change.setChangeType(ChangeType.PARENT_INTERFACE_DELETE);
+                else
+                    change.setChangeType(ChangeType.PARENT_CLASS_DELETE);
+            }
+        }
+
+        if (change.isUnclassified()) {
+            if(NodeTypeHelper.isStatement(node)){
+                change.setChangeType(ChangeType.STATEMENT_DELETE);
+            }
+        }
+        return classifyDoLast(change, processedNodes);
+    }
+
+    private SourceCodeChange classifyUpdate(Update update, MappingStore mappings, HashSet<ITree> processedNodes) {
+        SourceCodeChange change = SourceCodeChange.Create(update, mappings);
+        ITree node = update.getNode();
+        ITree root = ITreeNodeHelper.getRootNode(node);
+
+        if(ITreeNodeHelper.isPartOfConditionExpression(node)){
+            change.setChangeType(ChangeType.CONDITION_EXPRESSION_CHANGE);
+            processedNodes.add(ITreeNodeHelper.getConditionExpressionRoot(node));
+        }
+        else if(NodeTypeHelper.isOfKind(node,NodeType.SIMPLE_NAME)) {
+            if (NodeTypeHelper.isOfKind(node.getParent(), NodeType.TYPE_DECLARATION)) {
+                change.setChangeType(ChangeType.CLASS_RENAMING);
+            }
+            else if (NodeTypeHelper.isOfKind(node.getParent(), NodeType.METHOD_DECLARATION)) {
+                change.setChangeType(ChangeType.METHOD_RENAMING);
+            }
+            else if (NodeTypeHelper.isOfKind(node.getParent(), NodeType.SINGLE_VARIABLE_DECLARATION ) && NodeTypeHelper.isOfKind(root, NodeType.METHOD_DECLARATION)) {
+                handleParamterChange(change);
+            }
+            else if (NodeTypeHelper.isOfKind(root, NodeType.TYPE_DECLARATION)) {
+                if (NodeTypeHelper.isInterface(node))
+                    change.setChangeType(ChangeType.PARENT_INTERFACE_CHANGE);
+                else
+                    change.setChangeType(ChangeType.PARENT_CLASS_CHANGE);
+            }
+            else if(NodeTypeHelper.isOfKind(root, NodeType.FIELD_DECLARATION)){
+                change.setChangeType(ChangeType.ATTRIBUTE_RENAMING);
+            }
+        }
+        else if (NodeTypeHelper.isOfKind(node.getParent(), NodeType.METHOD_INVOCATION)){
+            change.setChangeType(ChangeType.METHOD_INVOCATION_CHANGE);
+        }
+        else if (NodeTypeHelper.isOfKind(node.getParent(), NodeType.CONSTRUCTOR_INVOCATION)|| NodeTypeHelper.isOfKind(node.getParent(), NodeType.CLASS_INSTANCE_CREATION)){
+            change.setChangeType(ChangeType.CONSTRUCTOR_INVOCATION_CHANGE);
+        }
+        else if(NodeTypeHelper.isOfKind(root, NodeType.FIELD_DECLARATION)){
+                change.setChangeType(ChangeType.ATTRIBUTE_TYPE_CHANGE);
+        }
+        else if (NodeTypeHelper.isOfKind(change.getRootNode(), NodeType.METHOD_DECLARATION)){
+            if(NodeTypeHelper.isOfKind(node.getParent(),NodeType.SINGLE_VARIABLE_DECLARATION)){
+                handleParamterChange(change);
+            }
+            else if(NodeTypeHelper.isOfKind(node,NodeType.PRIMITIVE_TYPE)) {
+                if (NodeTypeHelper.isStructureNode(root)) {
+                    String oldLabel = node.getLabel();
+                    String newLabel = ((Update) change.getAction()).getValue();
+
+                    if (oldLabel == "void") {
+                        // void -> *
+                        change.setChangeType(ChangeType.RETURN_TYPE_INSERT);
+                    } else {
+                        if (newLabel == "void") {
+                            // * -> void
+                            change.setChangeType(ChangeType.RETURN_TYPE_DELETE);
+                        } else {
+                            // * -> *
+                            change.setChangeType(ChangeType.RETURN_TYPE_CHANGE);
+                        }
+                    }
+                    //variable, enum rename would be here as well
+                }
+            }
+        }
+        else if (NodeTypeHelper.isStatement(node)) {
+            change.setChangeType(ChangeType.STATEMENT_UPDATE);
+        }
+
+        if (change.isUnclassified()) {
+            for(ITree parent : node.getParents()) {
+                if (NodeTypeHelper.isStatement(parent)) {
+                    change.setChangeType(ChangeType.STATEMENT_UPDATE);
+                    break;
+                }
+            }
+        }
+        return classifyDoLast(change, processedNodes);
+    }
+
+    private SourceCodeChange classifyInsert(Insert insert, MappingStore mappings, HashSet<ITree> processedNodes) {
+        ITree node = insert.getNode();
+        SourceCodeChange change = SourceCodeChange.Create(insert, mappings);
+
+        if (NodeTypeHelper.isOfKind(node, NodeType.TYPE_DECLARATION)) {
+            change.setChangeType(ChangeType.ADDITIONAL_CLASS);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.SINGLE_VARIABLE_DECLARATION)){
+            change.setChangeType(ChangeType.PARAMETER_INSERT);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.SIMPLE_TYPE)
+                && NodeTypeHelper.isOfKind(node.getParent(), NodeType.TYPE_DECLARATION)){
+
+                if(NodeTypeHelper.isInterface(node))
+                    change.setChangeType(ChangeType.PARENT_INTERFACE_INSERT);
+                else
+                    change.setChangeType(ChangeType.PARENT_CLASS_INSERT);
+        }
+        else if (NodeTypeHelper.isOfKind(node, NodeType.METHOD_DECLARATION)) {
+            change.setChangeType(ChangeType.ADDED_FUNCTIONALITY);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.FIELD_DECLARATION)){
+            change.setChangeType(ChangeType.ADDITIONAL_OBJECT_STATE);
+        }
+        else if(NodeTypeHelper.isOfKind(node,NodeType.METHOD_INVOCATION)){
+            change.setChangeType(ChangeType.METHOD_INVOCATION_INSERT);
+        }
+        else if(ITreeNodeHelper.isMethodInvocationParameter(node)){
+            change.setChangeType(ChangeType.METHOD_INVOCATION_PARAMETER_ADD);
+        }
+        else if(NodeTypeHelper.isOfKind(node,NodeType.CONSTRUCTOR_INVOCATION)
+                || NodeTypeHelper.isOfKind(node, NodeType.CLASS_INSTANCE_CREATION)){
+            change.setChangeType(ChangeType.CONSTRUCTOR_INVOCATION_INSERT);
+        }
+        else if(NodeTypeHelper.isOfKind(node.getParent(),NodeType.CONSTRUCTOR_INVOCATION)|| NodeTypeHelper.isOfKind(node.getParent(), NodeType.CLASS_INSTANCE_CREATION)){
+            change.setChangeType(ChangeType.CONSTRUCTOR_INVOCATION_PARAMETER_INSERT);
+        }
+        else if (ITreeNodeHelper.isElsePath(node)) {
+            change.setChangeType(ChangeType.ALTERNATIVE_PART_INSERT);
+        }
+        else if(NodeTypeHelper.isLoop(node)){
+            change.setChangeType(ChangeType.LOOP_STATEMENT_INSERT);
+        }
+        else if(NodeTypeHelper.isStatement(node)){
+            change.setChangeType(ChangeType.STATEMENT_INSERT);
+        }
+
+        return classifyDoLast(change, processedNodes);
+    }
+
+    private SourceCodeChange classifyDoLast(SourceCodeChange change, HashSet<ITree> processedNodes) {
+        if (change.getChangeType() != ChangeType.UNCLASSIFIED_CHANGE)
+            processedNodes.add(change.getNode());
+        if (includeUnclassified || change.getChangeType() != ChangeType.UNCLASSIFIED_CHANGE)
+            return change;
+        return null;
+    }
+
+    private boolean ignoreAction(Action a) {
+            return false;
+//            if(NodeTypeHelper.isOfSpecialInterest(a.getNode()))
+//                return false;
+//
+//            // check if original node has already been processed
+//            if (processedNodes.contains(a.getNode()))
+//                return true;
+//
+//            // check if any parent has already been processed //This may not work for deletes
+//            if (!Collections.disjoint(processedNodes, a.getNode().getParents()))
+//                return true;
+//
+//            return false;
+
+    }
+
+    private void handleParamterChange(SourceCodeChange change) {
+        ITree node = change.getAction().getNode();
+        ITree param = node.getParent();
+
+        if (NodeTypeHelper.isParameter(param)) {
+            if(NodeTypeHelper.isOfKind(node,NodeType.SIMPLE_NAME))
+                change.setChangeType(ChangeType.PARAMETER_RENAMING);
+            else {
+                change.setChangeType(ChangeType.PARAMETER_TYPE_CHANGE);
+            }
+        }
+    }
+}

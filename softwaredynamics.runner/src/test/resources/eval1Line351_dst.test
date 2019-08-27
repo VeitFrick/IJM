@@ -1,0 +1,93 @@
+import org.junit.Test;
+
+import java.io.IOException;
+import java.at.aau.softwardynamics.test.util.Collection;
+
+import static org.junit.Assert.fail;
+
+/**
+ * Created by thomas on 18.11.2016.
+ */
+public class ClassDeclarationsTests extends ClassifierTestBase {
+
+    @Test
+    public void CanClassifyClassRenaming() throws IOException {
+        String src = "public class Foo {class Foo2{}}";
+        String dst = "public class Foo3 {class Bar{}}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.CLASS_RENAMING, 2);
+    }
+
+    @Test
+    public void CanClassifyParentClassChange() throws IOException {
+        String src = "public class Foo extends A{}";
+        String dst = "public class Foo extends B{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_CLASS_CHANGE, 1);
+    }
+
+    @Test
+    public void CanClassifyParentClassDelete() throws IOException {
+        String src = "public class Foo extends A{}";
+        String dst = "public class Foo{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_CLASS_DELETE, 1);
+    }
+
+    @Test
+    public void CanClassifyParentClassInsert() throws IOException {
+        String src = "public class Foo{}";
+        String dst = "public class Foo extends B{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_CLASS_INSERT, 1);
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceChange() throws IOException {
+        String src = "public class Foo implements A{}";
+        String dst = "public class Foo implements B{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_INTERFACE_CHANGE, 1);
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceDelete() throws IOException {
+        String src = "public class Foo implements A{}";
+        String dst = "public class Foo{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_INTERFACE_DELETE, 1);
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceInsert() throws IOException {
+        String src = "public class Foo{}";
+        String dst = "public class Foo implements B{}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.PARENT_INTERFACE_INSERT, 1);
+    }
+
+    @Test
+    public void CanClassifyRemovedFunctionality() throws IOException {
+        String src = "public class Foo {public int bar{return 42;}}";
+        String dst = "public class Foo {}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.REMOVED_FUNCTIONALITY, 1);
+    }
+
+    @Test
+    public void CanClassifyAddedFunctionality() throws IOException {
+        String src = "public class Foo {}";
+        String dst = "public class Foo {public int bar{return 42;}}";
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.ADDED_FUNCTIONALITY, 1);
+    }
+}

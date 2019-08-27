@@ -1,0 +1,160 @@
+import NodeType;
+import com.github.gumtreediff.actions.ActionGenerator;
+import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
+import com.github.gumtreediff.matchers.CompositeMatchers;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.matchers.OptimizedVersions;
+import com.github.gumtreediff.matchers.heuristic.mtdiff.MtDiffOptimizedMatcher;
+import com.github.gumtreediff.matchers.optimal.rted.RtedMatcher;
+import com.github.gumtreediff.tree.TreeContext;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.at.aau.softwardynamics.test.util.Collection;
+import java.at.aau.softwardynamics.test.util.List;
+import java.at.aau.softwardynamics.test.util.Vector;
+
+import static org.junit.Assert.assertEquals;
+
+/**
+ * Created by thomas on 24.11.2016.
+ */
+public class MatcherTests {
+
+    private enum MatcherType {
+        GT,
+        GTOptimized,
+        CD,
+        MTDIFF,
+        RTED
+    }
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly_GT() throws IOException {
+        Collection<Action> editScript = getActions("example2source", "example2destination", MatcherType.GT);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                editScript,
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly_GTOptimized() throws IOException {
+        Collection<Action> editScript = getActions("example2source", "example2destination", MatcherType.GTOptimized);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                editScript,
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly_CD() throws IOException {
+        Collection<Action> editScript = getActions("example2source", "example2destination", MatcherType.CD);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                editScript,
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly_MTDIFF() throws IOException {
+        Collection<Action> editScript = getActions("example2source", "example2destination", MatcherType.MTDIFF);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                editScript,
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly_RTED() throws IOException {
+        Collection<Action> editScript = getActions("example2source", "example2destination", MatcherType.RTED);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                editScript,
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    private Collection<Action> getActions(String srcFile, String dstFile, MatcherType matcherType ) throws IOException {
+        files.FileHandler fh = new files.FileHandler(".\\src\\test\\resources", "test");
+        String src = fh.loadFile(srcFile);
+        String dst = fh.loadFile(dstFile);
+
+        JdtTreeGenerator gen = new JdtTreeGenerator();
+
+        TreeContext srcCtx = gen.generateFromString(src);
+        TreeContext dstCtx = gen.generateFromString(dst);
+
+        MappingStore mappings = new MappingStore();
+
+        Matcher m = null;
+
+        switch (matcherType) {
+            case CD:
+                m = new CompositeMatchers.ChangeDistiller(srcCtx.getRoot(), dstCtx.getRoot(), mappings);
+                break;
+            case GT:
+                m = new CompositeMatchers.ClassicGumtree(srcCtx.getRoot(), dstCtx.getRoot(), mappings);
+                break;
+            case GTOptimized:
+                m = new OptimizedVersions.Gtabcde(srcCtx.getRoot(), dstCtx.getRoot(), mappings);
+                break;
+            case MTDIFF:
+                m = new MtDiffOptimizedMatcher(srcCtx.getRoot(), dstCtx.getRoot(), mappings);
+                break;
+            case RTED:
+                m = new RtedMatcher(srcCtx.getRoot(), dstCtx.getRoot(), mappings);
+                break;
+        }
+
+        m.match();
+
+        return getEditScript(srcCtx, dstCtx, mappings);
+    }
+
+    private static List<Action> getActionsForNodeType(Collection<Action> editScript, NodeType nodeType) {
+        List<Action> retVal = new Vector<>();
+
+        int typeValue = nodeType.getValue();
+
+        for(Action action : editScript)
+            if (action.getNode().getType() == typeValue)
+                retVal.add(action);
+
+        return retVal;
+    }
+
+    private static List<Action> getEditScript(TreeContext src, TreeContext dst, MappingStore mappings) throws IOException {
+        ActionGenerator g = new ActionGenerator(src.getRoot(), dst.getRoot(), mappings);
+        g.generate();
+        return g.getActions();
+    }
+
+}

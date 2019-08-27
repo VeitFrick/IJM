@@ -1,0 +1,51 @@
+public class JChangeClassifier {
+    private SourceCodeChange classifyInsert(Insert insert, MappingStore mappings, HashSet<ITree> processedNodes) {
+        ITree node = insert.getNode();
+        SourceCodeChange change = SourceCodeChange.Create(insert, mappings);
+        ITree root = change.getRootNode();
+
+        if (NodeTypeHelper.isOfKind(node, NodeType.TYPE_DECLARATION)) {
+            change.setChangeType(ChangeType.ADDITIONAL_CLASS);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.SINGLE_VARIABLE_DECLARATION)){
+            change.setChangeType(ChangeType.PARAMETER_INSERT);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.SIMPLE_TYPE)
+                && NodeTypeHelper.isOfKind(node.getParent(), NodeType.TYPE_DECLARATION)){
+
+                if(NodeTypeHelper.isInterface(node))
+                    change.setChangeType(ChangeType.PARENT_INTERFACE_INSERT);
+                else
+                    change.setChangeType(ChangeType.PARENT_CLASS_INSERT);
+        }
+        else if (NodeTypeHelper.isOfKind(node, NodeType.TYPE_DECLARATION)) {
+                // class insert
+         }
+        else if (NodeTypeHelper.isOfKind(node, NodeType.METHOD_DECLARATION)) {
+            change.setChangeType(ChangeType.ADDED_FUNCTIONALITY);
+        }
+        else if(NodeTypeHelper.isOfKind(node, NodeType.FIELD_DECLARATION)){
+            change.setChangeType(ChangeType.ADDITIONAL_OBJECT_STATE);
+        }
+
+        if (change.isUnclassified()) {
+            if (ITreeNodeHelper.isElsePath(node)) {
+                change.setChangeType(ChangeType.ALTERNATIVE_PART_INSERT);
+            }
+            else if(NodeTypeHelper.isStatement(node)){
+                change.setChangeType(ChangeType.STATEMENT_INSERT);
+            }
+            else{
+                for (ITree parent : node.getParents()) {
+                    if (NodeTypeHelper.isStatement(parent)) {
+                        processedNodes.add(parent);
+                        change.setChangeType(ChangeType.STATEMENT_UPDATE);
+                        break;
+                    }
+                }
+            }
+        }
+        return classifyDoLast(change, processedNodes);
+
+    }
+}

@@ -1,0 +1,53 @@
+import org.junit.Test;
+
+import static org.junit.Assert.fail;
+
+/**
+ * Created by thomas on 18.11.2016.
+ */
+public class ClassDeclarationsTests extends ClassifierTestBase {
+
+    @Test
+    public void CanClassifyClassRenaming() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentClassChange() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentClassDelete() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentClassInsert() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceChange() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceDelete() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyParentInterfaceInsert() {
+        fail();
+    }
+
+    @Test
+    public void CanClassifyRemovedFunctionality() {
+        fail();
+    }
+
+    public void CanClassifyAddedFunctionality() {
+        fail();
+    }
+}

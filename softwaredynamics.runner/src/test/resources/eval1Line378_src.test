@@ -1,0 +1,74 @@
+import NodeType;
+import com.github.gumtreediff.actions.ActionGenerator;
+import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
+import com.github.gumtreediff.matchers.CompositeMatchers;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.tree.TreeContext;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.at.aau.softwardynamics.test.util.Collection;
+import java.at.aau.softwardynamics.test.util.List;
+import java.at.aau.softwardynamics.test.util.Vector;
+
+import static org.junit.Assert.assertEquals;
+
+/**
+ * Created by thomas on 24.11.2016.
+ */
+public class MatcherTests {
+
+
+    @Test
+    public void methodDeclarationsAreMappedCorrectly() throws IOException {
+        files.FileHandler fh = new files.FileHandler(".\\src\\test\\resources", "test");
+        String src = fh.loadFile("example2source");
+        String dst = fh.loadFile("example2destination");
+
+        JdtTreeGenerator gen = new JdtTreeGenerator();
+
+        TreeContext srcCtx = gen.generateFromString(src);
+        TreeContext dstCtx = gen.generateFromString(dst);
+
+        MappingStore mappings = getMappings(srcCtx, dstCtx);
+
+        Collection<Action> methodDeclActions = getActionsForNodeType(
+                getEditScript(srcCtx, dstCtx, mappings),
+                NodeType.METHOD_DECLARATION);
+
+        // there should be 5 Insert actions for nodes with type METHOD_DECLARATION
+        assertEquals(7, methodDeclActions.size());
+        for(Action action : methodDeclActions)
+            assertEquals(Insert.class, action.getClass());
+    }
+
+    private static List<Action> getActionsForNodeType(Collection<Action> editScript, NodeType nodeType) {
+        List<Action> retVal = new Vector<>();
+
+        int typeValue = nodeType.getValue();
+
+        for(Action action : editScript)
+            if (action.getNode().getType() == typeValue)
+                retVal.add(action);
+
+        return retVal;
+    }
+
+    private static List<Action> getEditScript(TreeContext src, TreeContext dst, MappingStore mappings) throws IOException {
+        ActionGenerator g = new ActionGenerator(src.getRoot(), dst.getRoot(), mappings);
+        g.generate();
+        return g.getActions();
+    }
+
+    private static MappingStore getMappings(TreeContext src, TreeContext dst) {
+        MappingStore retVal = new MappingStore();
+        Matcher m = new CompositeMatchers.ClassicGumtree(src.getRoot(), dst.getRoot(), new MappingStore());
+        m.match();
+
+        return retVal;
+    }
+
+}

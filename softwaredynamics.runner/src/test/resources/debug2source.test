@@ -1,0 +1,242 @@
+import org.junit.Test;
+
+import java.io.IOException;
+import java.at.aau.softwardynamics.test.util.Collection;
+
+import static org.junit.Assert.assertEquals;
+
+/**
+ * Created by thomas on 17.11.2016.
+ */
+public class BodyStatementsTests extends ClassifierTestBase {
+
+    /*
+    Statement Adds
+     */
+
+    @Test
+    public void canExtractSingleStatementAddToMethod() throws IOException {
+        String src = "public class Foo { public void Bar() {} }";
+        String dst = "public class Foo { public void Bar() { int i = 17; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_INSERT, 1);
+    }
+
+    @Test
+    public void canExtractMultipleStatementAddToMethod() throws IOException {
+        String src = "public class Foo { public void Bar() {} }";
+        String dst = "public class Foo { public void Bar() { int i = 17; double d = 20.5; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_INSERT, 2);
+    }
+
+    @Test
+    public void canExtractSingleStatementAddToConstructor() throws IOException {
+        String src = "public class Foo { public Foo() {} }";
+        String dst = "public class Foo { public Foo() { int i = 17; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_INSERT, 1);
+    }
+
+    @Test
+    public void canExtractMultipleStatementAddToConstructor() throws IOException {
+        String src = "public class Foo { public Foo() {} }";
+        String dst = "public class Foo { public Foo() { int i = 17; double d = 20.5; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_INSERT, 2);
+    }
+
+    /*
+    Statement Deletes
+     */
+
+    @Test
+    public void canExtractSingleStatementDeleteFromMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; } }";
+        String dst = "public class Foo { public void Bar() {} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_DELETE, 1);
+    }
+
+    @Test
+    public void canExtractMultipleStatementDeleteFromMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; double d = 20.5; } }";
+        String dst = "public class Foo { public void Bar() {} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_DELETE, 2);
+    }
+
+    @Test
+    public void canExtractSingeStatementDeleteFromConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { int i = 17; } }";
+        String dst = "public class Foo { public Foo() {} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_DELETE, 1);
+    }
+
+
+    @Test
+    public void canExtractMultipleStatementDeleteFromConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { int i = 17; double d = 20.5; } }";
+        String dst = "public class Foo { public Foo() {} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.STATEMENT_DELETE, 2);
+    }
+
+    /*
+    Statement Updates
+     */
+
+    @Test
+    public void canExtracSingleStatementUpdateInConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { int i = 17;} }";
+        String dst = "public class Foo { public Foo() { int i = 18;} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_UPDATE, 1);
+    }
+
+    @Test
+    public void canExtracMultipleStatementUpdateInConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { int i = 17; double d = 20.5; } }";
+        String dst = "public class Foo { public Foo() { int i = 18; double d = 44.4;} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_UPDATE, 2);
+    }
+
+    @Test
+    public void canExtracSingleStatementUpdateInMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; } }";
+        String dst = "public class Foo { public void Bar() { int i = 12; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.STATEMENT_UPDATE, 1);
+    }
+
+    @Test
+    public void canExtracMultipleStatementUpdateInMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; double d = 20.5; } }";
+        String dst = "public class Foo { public void Bar() { int i = 12; double d = 20.1; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_UPDATE, 2);
+    }
+
+    /*
+    Statement Ordering Change
+     */
+
+    @Test
+    public void canExtracSingleStatementOrderingChangeInConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { double d = 20.5; int i = 17;} }";
+        String dst = "public class Foo { public Foo() { int i = 17; double d = 20.5;} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_ORDERING_CHANGE, 1);
+    }
+
+    @Test
+    public void canExtracMultipleStatementOrderingChangeInConstructor() throws IOException {
+        String src = "public class Foo { public Foo() { int i = 17; double d = 20.5;  int x = 12; double z = 20.3;} }";
+        String dst = "public class Foo { public Foo() { double d = 20.5; int i = 17;  double z = 20.3; int x = 12;} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_ORDERING_CHANGE, 2);
+    }
+
+    @Test
+    public void canExtracSingleStatementOrderingChangeInMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { double d = 20.5; int i = 17; } }";
+        String dst = "public class Foo { public void Bar() { int i = 17; double d = 20.5; } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+        assertChangeCount(changes, ChangeType.STATEMENT_ORDERING_CHANGE, 1);
+    }
+
+    @Test
+    public void canExtracMultipleStatementOrderingChangeInMethod() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; double d = 20.5; int x = 12; double z = 20.3;} }";
+        String dst = "public class Foo { public void Bar() { double d = 20.5; int i = 17; double z = 20.3; int x = 12;} }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(2, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_ORDERING_CHANGE, 2);
+    }
+
+    @Test
+    public void canExtractStatementOderingChange() throws IOException {
+        String src = "public class Foo { public void Bar(P p) { p.doSomething(); p.init(); } }";
+        String dst = "public class Foo { public void Bar(P p) { p.init(); p.doSomething(); } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_ORDERING_CHANGE, 1);
+    }
+
+    /*
+    Change Parent
+     */
+    @Test
+    public void canExtractParentChanged() throws IOException {
+        String src = "public class Foo { public void Bar() { int i = 17; } }";
+        String dst = "public class Foo { public void Bar() { if (true) { int i = 17; } } }";
+
+        Collection<SourceCodeChange> changes = classify(src, dst);
+        quickDebug(changes);
+
+        assertEquals(1, changes.size());
+        assertChangeCount(changes, ChangeType.STATEMENT_PARENT_CHANGE, 1);
+    }
+}

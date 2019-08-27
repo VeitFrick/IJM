@@ -1,0 +1,7 @@
+package at.foooooo.barrr;
+
+public class Foo {
+    public void bar() {
+        int i = 17;
+    }
+}

@@ -1,0 +1,6 @@
+package at.foooooo.barrr;
+
+public class Foo {
+    public void bar() {
+    }
+}

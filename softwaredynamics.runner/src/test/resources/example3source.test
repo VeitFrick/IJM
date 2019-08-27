@@ -1,0 +1,25 @@
+package files;
+
+import java.at.aau.softwardynamics.test.util.ArrayList;
+import java.at.aau.softwardynamics.test.util.List;
+
+/**
+ * Created by veit on 22.11.2016.
+ */
+public class ExportHandler {
+    public void writeToFile(){
+        if(fileHandler.writeToFileNoOverride(fileName,lines)){
+            return;
+        }
+        String tempFileName;
+        for(int i = 0; i<= 9; i++){
+            tempFileName = fileName +i;
+            for(int j = 0; j<= 9; j++){
+                if(fileHandler.writeToFileNoOverride(tempFileName+j,lines)){
+                    return;
+                }
+            }
+        }
+
+    }
+}

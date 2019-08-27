@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>softwaredynamics</artifactId>
+        <groupId>at.aau.softwaredynamics</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>at.aau.softwaredynamics.classifier</artifactId>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>9</source>
+                    <target>9</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>at.aau.softwaredynamics</groupId>
+            <artifactId>at.aau.softwaredynamics.matchers</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>fr.inria.gforge.spoon</groupId>-->
+        <!--            <artifactId>spoon-core</artifactId>-->
+        <!--            <version>7.3.0</version>-->
+        <!--        </dependency>-->
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>4.5.0.201609210915-r</version>
+        </dependency>
+    </dependencies>
+
+</project>
