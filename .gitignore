@@ -17,8 +17,9 @@
 .idea/**/libraries
 
 #lib folder
-!lib/*.jar
 lib/*
+!lib/*.jar
+
 
 # Mongo Explorer plugin:
 .idea/**/mongoSettings.xml
@@ -83,3 +84,5 @@ log/
 *.xlk
 
 *.log
+# FullDependencyRunner progress files
+*_progress_*.txt
