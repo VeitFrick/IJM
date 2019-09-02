@@ -1,7 +1,6 @@
 # README  #
- Branch: refactor 
+ Branch: siesta19 
  
-[![CircleCI](https://circleci.com/bb/Xifiggam/softwaredynamics/tree/refactor.svg?style=svg&circle-token=2f66f81aa0e32d92a3d31d676e97a637f519838b)](https://circleci.com/bb/Xifiggam/softwaredynamics/tree/refactor)
 
 ## Building
 
@@ -9,9 +8,20 @@ In order to get started the following steps have to be performed:
 
 1. Checkout the repository.
 2. Open a commandline window and navigate to the checkout location.
-3. Build the project using `mvn clean package`
+3. Build the project using `mvn clean intstall`
 
-If for some reason the local maven repo is missing or has been deleted, you can recreate it using `install-custom-libs.bat`
+
+## Running 
+Run the CmdRunner with the following arguments:
+`-src path\to\the\file\example2source.test	-dst path\to\the\file\example2destination.test	-c None -m IJM -w FS -g OTG`
+(java -cp ijm.jar at.aau.softwaredynamics.runner.CmdRunner is needed here for jar)
+Choice of classifier, matcher, writer and tree-generator
+For Spoon based version use: `-c Java -m IJM_Spoon -g SPOON`
+
+For JDT/Classical IJM version use: `-c None -m IJM -g OTG`
+
+Run the FullProjectAnalyzer with the following arguments: `-p path\to\project -pw password -usr postgres -conn jdbc:postgresql://localhost:5432/depdatabase`
+
 
 
 ## Build Docker Image of WebService
@@ -25,9 +35,6 @@ To build to image run following command, substituting ``<currentVersion>`` with 
 ```
 $ docker build -t swdyn_ws --build-arg version=<currentVersion> .
 ```
-
-
-
 
 ### Running Docker Container
 
