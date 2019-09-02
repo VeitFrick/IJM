@@ -14,6 +14,7 @@
         <module>softwaredynamics.runner</module>
         <module>softwaredynamics.classifier</module>
         <module>softwaredynamics.diffws</module>
+        <module>softwaredynamics.dependency</module>
     </modules>
 
     <repositories>
@@ -102,39 +103,54 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>9</source>
-                    <target>9</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
+                <!-- Build an executable JAR -->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-jar-plugin</artifactId>-->
+<!--                <version>2.4</version>-->
+<!--                <configuration>-->
+
+<!--                </configuration>-->
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19.1</version>
+                <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
-                    <includes>
-                        <include>**/Test*.java</include>
-                        <include>**/*Test.java</include>
-                        <include>**/*Tests.java</include>
-                        <include>**/*TestCase.java</include>
-                    </includes>
-                    <!-- see: https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class -->
-                    <!-- https://stackoverflow.com/questions/23260057/the-forked-vm-terminated-without-saying-properly-goodbye-vm-crash-or-system-exi -->
-                    <argLine>-Xmx1024m -XX:MaxPermSize=256m</argLine>
+                    <archive>
+                        <manifest>
+                            <mainClass>at.aau.softwaredynamics.runner.git.FullProjectAnalyzer</mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
+                <!-- Build an executable JAR -->
+                <!--                <groupId>org.apache.maven.plugins</groupId>-->
+                <!--                <artifactId>maven-jar-plugin</artifactId>-->
+                <!--                <version>2.4</version>-->
+                <!--                <configuration>-->
+
+                <!--                </configuration>-->
             </plugin>
-            <!--<plugin>-->
-            <!--&lt;!&ndash; Build an executable JAR &ndash;&gt;-->
-            <!--<groupId>org.apache.maven.plugins</groupId>-->
-            <!--<artifactId>maven-jar-plugin</artifactId>-->
-            <!--<version>2.4</version>-->
-            <!--<configuration>-->
-            <!--<archive>-->
-            <!--<manifest>-->
-            <!--<mainClass>at.aau.softwaredynamics.runner.git.FullProjectAnalyzer</mainClass>-->
-            <!--</manifest>-->
-            <!--</archive>-->
-            <!--</configuration>-->
-            <!--</plugin>-->
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-surefire-plugin</artifactId>-->
+<!--                <version>2.19.1</version>-->
+<!--                <configuration>-->
+<!--                    <includes>-->
+<!--                        <include>**/Test*.java</include>-->
+<!--                        <include>**/*Test.java</include>-->
+<!--                        <include>**/*Tests.java</include>-->
+<!--                        <include>**/*TestCase.java</include>-->
+<!--                    </includes>-->
+<!--                    &lt;!&ndash; see: https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class &ndash;&gt;-->
+<!--                    &lt;!&ndash; https://stackoverflow.com/questions/23260057/the-forked-vm-terminated-without-saying-properly-goodbye-vm-crash-or-system-exi &ndash;&gt;-->
+<!--                    <argLine>-Xmx1024m -XX:MaxPermSize=256m</argLine>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
+<!--            <plugin>-->
+
+<!--            </plugin>-->
         </plugins>
     </build>
 

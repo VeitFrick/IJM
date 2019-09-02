@@ -1,8 +1,8 @@
 package at.aau.softwaredynamics.runner.git;
 
-import at.aau.softwaredynamics.runner.io.ProgressWritable;
-import at.aau.softwaredynamics.runner.meta.Commit;
-import at.aau.softwaredynamics.runner.meta.CommitPair;
+import at.aau.softwaredynamics.dependency.Commit;
+import at.aau.softwaredynamics.dependency.CommitPair;
+import at.aau.softwaredynamics.dependency.ProgressWritable;
 
 import java.io.*;
 import java.util.Collection;

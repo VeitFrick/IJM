@@ -1,4 +1,4 @@
-package at.aau.softwaredynamics.runner.io;
+package at.aau.softwaredynamics.dependency;
 
 public interface ProgressWritable {
 

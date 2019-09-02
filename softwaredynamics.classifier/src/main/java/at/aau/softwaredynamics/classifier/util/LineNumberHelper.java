@@ -55,6 +55,7 @@ public class LineNumberHelper {
                 endPosition = spoonObject.getPosition().getSourceEnd();
             }
         } else {
+            if (node.getPos() < 0) return new LineNumberRange();
             startPosition = node.getPos();
             endPosition = node.getPos() + node.getLength();
         }
@@ -134,7 +135,7 @@ public class LineNumberHelper {
         }
         catch (Exception ex) {
             linePosition = -1;
-            System.out.println(position);
+            System.out.println("Invalid line number, cannot calc offset: " + position);
         }
         return linePosition;
     }

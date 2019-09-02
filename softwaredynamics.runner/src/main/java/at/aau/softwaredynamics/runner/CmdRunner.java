@@ -23,13 +23,17 @@ import com.github.gumtreediff.matchers.CompositeMatchers;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.OptimizedVersions;
 import org.apache.commons.cli.*;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -100,6 +104,10 @@ public class CmdRunner implements Observer {
                     String dstFilePath = line.getOptionValue("dst");
                     File srcFile = new File(srcFilePath);
                     File dstFile = new File(dstFilePath);
+//                    String src = FileUtils.readFileToString(srcFile, StandardCharsets.UTF_8);
+//                    String dst = FileUtils.readFileToString(dstFile, StandardCharsets.UTF_8);
+//                    System.out.println(commitMsgGen(dstFile.getName(), src, dst,4));
+
 
                     ChangeWriter changeWriter = createWriter(matcher.getSimpleName(), "FILE_DIFF_" + (dstFile.getName().replace('.', '-')), isDryRun, writer, isSpoon);
 
@@ -208,6 +216,25 @@ public class CmdRunner implements Observer {
                     return null;
         }
     }
+
+//    private static String commitMsgGen(String fn, String src, String dst, int depth){
+//        JChangeClassifier classifier = new JChangeClassifier(false, JavaMatchers.IterativeJavaMatcher_Spoon.class, new SpoonTreeGenerator());
+//        classifier.setIncludeMetaChanges(true);
+//        CommitMsgGenService service = new CommitMsgGenService(classifier);
+//
+//            service.addChangePair(new ChangePair(
+//                    fn,
+//                    src,
+//                    dst));
+//
+//        try {
+//            return service.generateMessage(depth);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return "Error";
+//    }
+
 
     private static Options createOptions() {
         Options options = new Options();

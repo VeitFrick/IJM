@@ -1,13 +1,19 @@
 package at.aau.softwaredynamics.runner.git;
 
-import at.aau.softwaredynamics.runner.meta.CommitPair;
+import at.aau.softwaredynamics.classifier.JChangeClassifier;
+import at.aau.softwaredynamics.dependency.Commit;
+import at.aau.softwaredynamics.dependency.CommitPair;
+import at.aau.softwaredynamics.dependency.DependencyChanges;
+import at.aau.softwaredynamics.dependency.DependencyExtractor;
+import at.aau.softwaredynamics.gen.SpoonTreeGenerator;
+import at.aau.softwaredynamics.matchers.JavaMatchers;
+import at.aau.softwaredynamics.runner.output.AggregatedDBOutput;
 import at.aau.softwaredynamics.runner.output.DBOutput;
 import at.aau.softwaredynamics.runner.output.FileOutput;
 import at.aau.softwaredynamics.runner.output.OutputWriter;
 import at.aau.softwaredynamics.runner.util.VirtualSpoonPom;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.filefilter.FileFilterUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -23,7 +29,9 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -31,6 +39,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static at.aau.softwaredynamics.runner.git.DepCoordinator.sanitizeFilename;
+
 
 /**
  * Analyzes all files from a single commit from a repository
@@ -55,6 +66,7 @@ public class FullProjectAnalyzer {
     private boolean aggregatedMode; // if set, only aggregated data will be saved to outputWriter
     private boolean sourceCodeChangeMode; // if set, only source code changes will be diffed, and NO dependencies
     Set<String> allModulePaths;
+    String singleCommit; // TODO if set only this commit and its parent are considered
     static boolean verbose = false; // verbose output
 
     public static void main(String[] args) {
@@ -65,16 +77,17 @@ public class FullProjectAnalyzer {
             // parse the command line arguments
             CommandLine line = parser.parse(options, args);
 
-            logToConsole("FullProjectDependencyRunner started with following arguments:", "main", "INFO");
-
-            for (Option option : line.getOptions()) {
-                logToConsole(option.getLongOpt() + (option.getValue() == null ? " is ON" : " = " + option.getValue()), "main", "INFO");
-            }
-
             if (line.hasOption("help")) {
                 HelpFormatter formatter = new HelpFormatter();
                 formatter.printHelp("FullProjectAnalyzer", options);
             } else if (line.hasOption("p")) {
+
+                logToConsole("FullProjectDependencyRunner started with following arguments:", "main", "INFO");
+
+                for (Option option : line.getOptions()) {
+                    logToConsole(option.getLongOpt() + (option.getValue() == null ? " is ON" : " = " + option.getValue()), "main", "INFO");
+                }
+
                 // set log level
                 FullProjectAnalyzer.setVerbose(line.hasOption("verbose"));
 
@@ -89,20 +102,23 @@ public class FullProjectAnalyzer {
                     writer = fileOutput;
                 } else {
                     DBOutput dbOutput;
-                    if (line.hasOption("agg")) {
-                        throw new NotImplementedException("dependency aggregation mode is not supported in this version");
-                    } else {
-                        dbOutput = new DBOutput();
+                    if (!line.hasOption("conn")) {
+                        System.err.println("Database Connection Url missing!");
+                        return;
+                    }
+                    if (!line.hasOption("usr")) {
+                        System.err.println("Database User missing!");
+                        return;
+                    }
+                    if (!line.hasOption("pw")) {
+                        System.err.println("Database Password missing!");
+                        return;
                     }
 
-                    if (line.hasOption("conn")) {
-                        dbOutput.setConnectionUrl(line.getOptionValue("conn"));
-                    }
-                    if (line.hasOption("usr")) {
-                        dbOutput.setUser(line.getOptionValue("usr"));
-                    }
-                    if (line.hasOption("pw")) {
-                        dbOutput.setPassword(line.getOptionValue("pw"));
+                    if (line.hasOption("agg")) {
+                        dbOutput = new AggregatedDBOutput(line.getOptionValue("conn"),line.getOptionValue("usr"),line.getOptionValue("pw"));
+                    } else {
+                        dbOutput = new DBOutput(line.getOptionValue("conn"),line.getOptionValue("usr"),line.getOptionValue("pw"));
                     }
                     logToConsole("Current db schema name is: " + dbOutput.schemaname, "main", "INFO");
                     writer = dbOutput;
@@ -126,7 +142,26 @@ public class FullProjectAnalyzer {
                             FullProjectAnalyzer fullProjectAnalyzer = null;
 
                             if (line.hasOption("srcf") && line.hasOption("dstf")) {
-                                throw new NotImplementedException("single file mode is not supported in this version");
+                                logToConsole(("Working on " + dir.getAbsolutePath() + " with current src/dst files: " + line.getOptionValue("srcf") + " - " + line.getOptionValue("dstf")), "", "RUNNER");
+                                logToConsole("THIS IS DEPRECATED AND WILL IGNORE MOST OF YOUR INPUT FLAGS, USE AT OWN RISK", "main", "WARNING");
+                                //UNTESTED CODE BELOW
+//                                fullProjectAnalyzer = new FullProjectAnalyzer(
+//                                        dir.getAbsolutePath(),
+//                                        "refs/heads/master",
+//                                        isRootMaven);
+//                                fullProjectAnalyzer.setAggregatedMode(line.hasOption("agg"));
+
+                                String srcTxt = new String(Files.readAllBytes(Paths.get(dir.getAbsolutePath(), line.getOptionValue("srcf"))));
+                                String dstTxt = new String(Files.readAllBytes(Paths.get(dir.getAbsolutePath(), line.getOptionValue("dstf"))));
+
+                                JChangeClassifier classifier = new JChangeClassifier(false, JavaMatchers.IterativeJavaMatcher_Spoon.class, new SpoonTreeGenerator());
+                                classifier.classify(srcTxt,dstTxt,false);
+                                DependencyExtractor dependencyExtractor = new DependencyExtractor(classifier.getMappings(),classifier.getActions(),classifier.getSrcContext().getRoot(),classifier.getDstContext().getRoot(),srcTxt,dstTxt);
+                                dependencyExtractor.extractDependencies();
+                                DependencyChanges dependencyChanges = dependencyExtractor.getDependencyChanges();
+                                System.out.println(dependencyChanges.getDependencyChangeOverview(classifier.getCodeChanges(),";"));
+//                                fullProjectAnalyzer.writeDepDiff(Collections.singletonList(dependencyChanges), null, null);
+
                             } else {
                                 // else do a module
                                 String subPath = "";
@@ -269,16 +304,19 @@ public class FullProjectAnalyzer {
         options.addOption(Option.builder("autoprog").longOpt("autoprogress").desc("Enables searching for the most recent progress file in this directory and using it for every module").build());
         options.addOption(Option.builder("src").hasArg().longOpt("source").desc("The source commit to be diffed (omit to diff all commits)").build());
         options.addOption(Option.builder("dst").hasArg().longOpt("destination").desc("The destination commit to be diffed, must be child of source commit (omit to diff all commits)").build());
-        options.addOption(Option.builder("srcf").hasArg().longOpt("srcfile").desc("UNSUPPORTED! Source file relative path (Overrides git building)").build());
-        options.addOption(Option.builder("dstf").hasArg().longOpt("dstfile").desc("UNSUPPORTED! Destination file relative path (Overrides git building)").build());
+        options.addOption(Option.builder("srcf").hasArg().longOpt("srcfile").desc("DEPRECATED! Source file relative path (Overrides git building)").build());
+        options.addOption(Option.builder("dstf").hasArg().longOpt("dstfile").desc("DEPRECATED! Destination file relative path (Overrides git building)").build());
         options.addOption(Option.builder("out").hasArg().longOpt("output").desc("Path to the file for file based output (will override db!)").build());
+
+        //Database Options:
         options.addOption(Option.builder("conn").hasArg().longOpt("connection").desc("DB connection string eg. jdbc:postgresql://localhost:5432/postgres").build());
         options.addOption(Option.builder("usr").hasArg().longOpt("dbuser").desc("DB Username").build());
         options.addOption(Option.builder("pw").hasArg().longOpt("dbpassword").desc("DB Password").build());
+
         options.addOption(Option.builder("sub").longOpt("submode").desc("Run on all sub-folders of given path instead").build());
         options.addOption(Option.builder("mvn").longOpt("maven").desc("Set this to be the root of a maven project").build());
-        options.addOption(Option.builder("agg").longOpt("aggregate").desc("UNSUPPORTED! Only write aggregated output to writer").build());
-        options.addOption(Option.builder("dep").longOpt("dependencies").desc("UNSUPPORTED! Write dependencies to output instead of source code changes").build());
+        options.addOption(Option.builder("agg").longOpt("aggregate").desc("Only write aggregated output to writer").build());
+        options.addOption(Option.builder("dep").longOpt("dependencies").desc("Write dependencies to output instead of source code changes").build());
         options.addOption(Option.builder("mod").hasArg().longOpt("module").desc("Sets module of maven project that should be built").build());
         options.addOption(Option.builder("t").hasArg().longOpt("threads").desc("Sets number of threads").build());
         options.addOption(Option.builder("v").hasArg().longOpt("verbose").desc("Enables verbose logging").build());
@@ -368,10 +406,40 @@ public class FullProjectAnalyzer {
         if (isSourceCodeChangeMode()) {
             analyzeLocalRepoChanges(progressFilePath);
             return;
-        } else {
-            // is dependency extraction mode
-            throw new NotImplementedException("dependency extraction mode is not supported in this version");
         }
+
+        long t = System.currentTimeMillis();
+
+        if(getOutputWriter() instanceof DBOutput){
+            if(sourceCodeChangeMode){
+                ((DBOutput)getOutputWriter()).writeProjectInformation(repository.getWorkTree().getName(), subPath, System.currentTimeMillis(),"Only IJM_Spoon supported right now!");
+
+            }
+            else{
+                ((DBOutput)getOutputWriter()).writeProjectInformation(repository.getWorkTree().getName(), subPath, System.currentTimeMillis());
+
+            }
+        }
+
+        DiffCoordinator coordinator = createAndStartNewDiffCoordinator(progressFilePath);
+
+        ExecutorService executor = Executors.newFixedThreadPool(numOfThreads);
+        for (int i = 0; i < numOfThreads; i++) {
+            try {
+                executor.execute(new DepDiffWorker(coordinator, getOutputWriter()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(7, TimeUnit.DAYS);
+            logToConsole(("All depdiffs done - building and diffing took " + (System.currentTimeMillis() - t) + "ms"), "", "DIFF");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
@@ -381,7 +449,46 @@ public class FullProjectAnalyzer {
      * @param progressFilePath existing commits progress file to skip
      */
     public void analyzeLocalRepoAndAggregate(String progressFilePath) {
-        throw new NotImplementedException("dependency aggregation mode is not supported in this version");
+
+        long t = System.currentTimeMillis();
+
+        if (getOutputWriter() instanceof DBOutput) {
+            ((DBOutput) getOutputWriter()).writeProjectInformation(repository.getWorkTree().getName(), subPath, System.currentTimeMillis());
+        }
+
+        // Construct a new work list of single commits for dependecy extraction and aggregation
+        List<Commit> commitWorkList = new ArrayList<>();
+        for (RevCommit commit : commits) {
+            commitWorkList.add(new Commit(commit, subPath, repository.getWorkTree().getName()));
+        }
+
+        DepCoordinator coordinator = new DepCoordinator(snapshotGenerator, commitWorkList, numOfThreads);
+        if (progressFilePath != null) {
+            try {
+                coordinator.applyProgress(progressFilePath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        // start coordintator service so workers can connect
+        coordinator.startCoordinator();
+
+        ExecutorService executor = Executors.newFixedThreadPool(numOfThreads);
+        for (int i = 0; i < numOfThreads; i++) {
+            try {
+                executor.execute(new DepWorker(coordinator, getOutputWriter()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(7, TimeUnit.DAYS);
+            logToConsole(("All dependency extractions done - building and extracting took " + (System.currentTimeMillis() - t) + "ms"), "", "DEP");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -397,17 +504,7 @@ public class FullProjectAnalyzer {
             ((DBOutput) getOutputWriter()).writeProjectInformation(repository.getWorkTree().getName(), subPath, System.currentTimeMillis());
         }
 
-        DiffCoordinator coordinator = new DiffCoordinator(snapshotGenerator, workList, numOfThreads);
-        if (progressFilePath != null) {
-            try {
-                coordinator.applyProgress(progressFilePath);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // start coordintator service so workers can connect
-        coordinator.startCoordinator();
+        DiffCoordinator coordinator = createAndStartNewDiffCoordinator(progressFilePath);
 
         ExecutorService executor = Executors.newFixedThreadPool(numOfThreads);
         for (int i = 0; i < numOfThreads; i++) {
@@ -424,6 +521,38 @@ public class FullProjectAnalyzer {
 
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+
+    private DiffCoordinator createAndStartNewDiffCoordinator(String progressFilePath) {
+        DiffCoordinator coordinator =new DiffCoordinator(snapshotGenerator, workList, numOfThreads);
+        if (progressFilePath != null) {
+            try {
+                coordinator.applyProgress(progressFilePath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // start coordintator service so workers can connect
+        coordinator.startCoordinator();
+        return coordinator;
+    }
+
+    /**
+     * Writes the Changes to the given output Writer
+     * @param changes - Changes to be written as list
+     * @param srcCommit
+     * @param dstCommit
+     */
+    private void writeDepDiff(List<DependencyChanges> changes, RevCommit srcCommit, RevCommit dstCommit) {
+        if (outputWriter != null) {
+            try {
+                outputWriter.writeDependencyInformation(changes, srcCommit, dstCommit, subPath, repository.getWorkTree().getName(), System.currentTimeMillis());
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -528,11 +657,11 @@ public class FullProjectAnalyzer {
         if (threadName == null || threadName.equals("")) {
             s.append("{" + Thread.currentThread().getName() + "}\t");
         } else {
-            s.append("{" + threadName + "}\t");
+            s.append("{").append(threadName).append("}\t");
         }
         s.append(" [" + ZonedDateTime.now().format(timeColonFormatter) + "]\t");
         if (!type.equals("")) {
-            s.append(" [" + type + "]\t");
+            s.append(" [").append(type).append("]\t");
         }
         s.append(" " + message + "");
         if(type.toLowerCase().equals("error")) {
@@ -546,10 +675,6 @@ public class FullProjectAnalyzer {
                 }
             }
         }
-    }
-
-    public int getNumOfThreads() {
-        return numOfThreads;
     }
 
     public void setNumOfThreads(int numOfThreads) {
@@ -590,9 +715,5 @@ public class FullProjectAnalyzer {
 
     public String getProjectAndModuleString() {
         return " { name: " + getProjectName() + " module: " + getSubPath() + "}";
-    }
-
-    public static String sanitizeFilename(String inputName) {
-        return inputName.replaceAll("[^a-zA-Z0-9-_\\.]", "_");
     }
 }

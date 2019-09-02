@@ -1,6 +1,7 @@
 package at.aau.softwaredynamics.runner.output;
 
 import at.aau.softwaredynamics.classifier.entities.SourceCodeChange;
+import at.aau.softwaredynamics.dependency.DependencyChanges;
 import org.apache.commons.lang3.NotImplementedException;
 import org.eclipse.jgit.revwalk.RevCommit;
 
@@ -11,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +52,12 @@ public class FileOutput implements OutputWriter {
     }
 
     @Override
+    public void writeDependencyInformation(Collection<DependencyChanges> dependencyChanges, RevCommit srcCommit, RevCommit dstCommit, String module, String project, long timeStamp) {
+        //TODO implement
+        System.out.println("This method is currently not implemented.");
+    }
+
+    @Override
     public void writeChangeInformation(Map<String, List<SourceCodeChange>> changes, RevCommit srcCommit, RevCommit dstCommit, String module, String project, long timeStamp) throws SQLException {
         throw new NotImplementedException("TODO write to file");
     }
@@ -68,4 +76,15 @@ public class FileOutput implements OutputWriter {
 
         return file;
     }
+
+//    public String loadFile(String fileName){
+//        String path = filePath+File.separator+fileName+"."+extension;
+//        try {
+//            return  new String(Files.readAllBytes(Paths.get(path)));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            logger.error(e);
+//            return e.toString();
+//        }
+//    }
 }

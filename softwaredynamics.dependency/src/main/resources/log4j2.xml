@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="WARN">
+    <appenders>
+        <File name="File" fileName="logs/logfile.log">
+            <PatternLayout pattern="%d{ISO8601} %p %c{1} %M %msg%n%rEx{full}%n"/>
+        </File>
+    </appenders>
+
+    <loggers>
+        <logger name="com.mchange.v2.c3p0" level="OFF" />
+        <logger name="org.hibernate" level="OFF" />
+        <logger name="com.zaxxer.hikari" level="OFF"/>
+        <logger name="at.aau.softwaredynamics" level="ERROR" />
+
+        <root level="debug">
+            <appender-ref ref="File" level="error"/>
+        </root>
+    </loggers>
+</configuration>

@@ -1,6 +1,5 @@
-package at.aau.softwaredynamics.runner.meta;
+package at.aau.softwaredynamics.dependency;
 
-import at.aau.softwaredynamics.runner.io.ProgressWritable;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata modelVersion="1.1.0">
+  <groupId>com.github.gumtreediff</groupId>
+  <artifactId>core</artifactId>
+  <version>2.1.0-SNAPSHOT</version>
+  <versioning>
+    <snapshot>
+      <timestamp>20170925.100036</timestamp>
+      <buildNumber>2</buildNumber>
+    </snapshot>
+    <lastUpdated>20170925100036</lastUpdated>
+    <snapshotVersions>
+      <snapshotVersion>
+        <extension>jar</extension>
+        <value>2.1.0-20170925.100036-2</value>
+        <updated>20170925100036</updated>
+      </snapshotVersion>
+      <snapshotVersion>
+        <extension>pom</extension>
+        <value>2.1.0-20170925.100036-2</value>
+        <updated>20170925100036</updated>
+      </snapshotVersion>
+    </snapshotVersions>
+  </versioning>
+</metadata>

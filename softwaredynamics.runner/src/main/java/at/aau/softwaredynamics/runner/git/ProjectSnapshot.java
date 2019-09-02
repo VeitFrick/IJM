@@ -2,6 +2,8 @@ package at.aau.softwaredynamics.runner.git;
 
 import at.aau.softwaredynamics.classifier.JChangeClassifier;
 import at.aau.softwaredynamics.classifier.entities.SourceCodeChange;
+import at.aau.softwaredynamics.dependency.DependencyChanges;
+import at.aau.softwaredynamics.dependency.DependencyExtractor;
 import at.aau.softwaredynamics.gen.SpoonTreeGenerator;
 import at.aau.softwaredynamics.matchers.JavaMatchers;
 import com.github.gumtreediff.tree.ITree;
@@ -95,6 +97,81 @@ class ProjectSnapshot {
             }
         }
         return commit.getId().getName() + "\n" + fileMapping + renamesString + "\n";
+    }
+
+    public List<DependencyChanges> calculateDependencyChangesBetweenSnapshots(ProjectSnapshot parent) {
+
+        List<DependencyChanges> dependencyChanges = new ArrayList<>();
+        if (parent == null) return dependencyChanges; // TODO maybe consider all added?
+//            AtomicReference<DependencyChanges> dependencyChanges = new AtomicReference<>();
+        if (!isRoot()) { // has a parent
+            fileToTypesMap.forEach((filename, types) -> {
+                Pair<String, String> fileTuple = fileRenames.stream()
+                        .filter(f -> f.getRight().equals(filename))
+                        .findFirst().orElseGet(() -> new ImmutablePair<>(filename, filename));
+
+                CtType newTopType = null;
+                CtType oldTopType = null;
+
+                // get new top type
+                for (CtType<?> type : types) {
+                    if (type.isTopLevel()) {
+                        newTopType = type;
+                        break;
+                    }
+                }
+
+                // get the old top type
+                for (CtType<?> type : parent.getTypesForFilename(fileTuple.getLeft())) {
+                    if (type.isTopLevel()) {
+                        oldTopType = type;
+                        break;
+                    }
+                }
+
+                if (oldTopType == null && newTopType == null) {
+                    return;
+                }
+
+                SpoonTreeGenerator spoonTreeGenerator = new SpoonTreeGenerator();
+                com.github.gumtreediff.tree.Pair<TreeContext, ITree> pair = spoonTreeGenerator.getTree(newTopType);
+                TreeContext newContext = pair.first;
+                newContext.setRoot(pair.second);
+
+                com.github.gumtreediff.tree.Pair<TreeContext, ITree> oldPair;
+                if (oldTopType != null)
+                    oldPair = spoonTreeGenerator.getTree(oldTopType);
+                else
+                    oldPair = spoonTreeGenerator.getTree("");
+                TreeContext oldContext = oldPair.first;
+                oldContext.setRoot(oldPair.second);
+
+                JChangeClassifier classifier = new JChangeClassifier(JavaMatchers.IterativeJavaMatcher_Spoon.class, null);
+                classifier.setDoTreeGeneration(false);
+
+                classifier.setSrcContext(oldContext);
+                classifier.setDstContext(newContext);
+
+                String src, dst;
+//                    src = oldTopType != null ? oldTopType.toString() : "";
+//                    dst = newTopType.toString();
+                src = parent.getFileToContentMap().get(fileTuple.getLeft());
+                if (src == null) src = "";
+                dst = fileToContentMap.get(filename);
+
+                try {
+                    classifier.classify(src, dst, false);
+                    DependencyExtractor dependencyExtractor = new DependencyExtractor(classifier.getMappings(), classifier.getActions(), classifier.getSrcContext().getRoot(), classifier.getDstContext().getRoot(), src, dst);
+                    dependencyExtractor.extractDependencies();
+                    dependencyChanges.add(dependencyExtractor.getDependencyChanges());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+        }
+
+        return dependencyChanges;
     }
 
     public Map<String, List<SourceCodeChange>> calculateSourceCodeChangesBetweenSnapshots(ProjectSnapshot parent) {

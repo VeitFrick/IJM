@@ -72,6 +72,24 @@
             <artifactId>org.eclipse.egit.github.core</artifactId>
             <version>2.1.5</version>
         </dependency>
+        <dependency>
+            <groupId>at.aau.softwaredynamics</groupId>
+            <artifactId>at.aau.softwaredynamics.dependency</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>at.aau.softwaredynamics</groupId>
+            <artifactId>at.aau.softwaredynamics.dependency</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>at.aau.softwaredynamics</groupId>-->
+<!--            <artifactId>at.aau.softwaredynamics.diffws</artifactId>-->
+<!--            <version>0.5.0</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
 
     </dependencies>
 
@@ -107,7 +125,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>at.aau.softwaredynamics.runner.CmdRunner</mainClass>
+                            <mainClass>at.aau.softwaredynamics.runner.git.FullProjectAnalyzer</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

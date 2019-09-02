@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.github.gumtreediff</groupId>
+  <artifactId>gen.jdt</artifactId>
+  <versioning>
+    <versions>
+      <version>2.1.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20170925100038</lastUpdated>
+  </versioning>
+</metadata>

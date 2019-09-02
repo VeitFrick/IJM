@@ -1,7 +1,7 @@
 package at.aau.softwaredynamics.runner.git;
 
-import at.aau.softwaredynamics.runner.io.ProgressWritable;
-import at.aau.softwaredynamics.runner.meta.CommitPair;
+import at.aau.softwaredynamics.dependency.CommitPair;
+import at.aau.softwaredynamics.dependency.ProgressWritable;
 import org.eclipse.jgit.lib.ObjectId;
 
 import java.io.File;

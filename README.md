@@ -1,4 +1,7 @@
 # README  #
+ Branch: refactor 
+ 
+[![CircleCI](https://circleci.com/bb/Xifiggam/softwaredynamics/tree/refactor.svg?style=svg&circle-token=2f66f81aa0e32d92a3d31d676e97a637f519838b)](https://circleci.com/bb/Xifiggam/softwaredynamics/tree/refactor)
 
 ## Building
 
@@ -6,24 +9,41 @@ In order to get started the following steps have to be performed:
 
 1. Checkout the repository.
 2. Open a commandline window and navigate to the checkout location.
-3. Build the project using `mvn clean install`
+3. Build the project using `mvn clean package`
 
-Java 9 or higher is necessary for building.
+If for some reason the local maven repo is missing or has been deleted, you can recreate it using `install-custom-libs.bat`
 
-## Running
 
-The built jar directly supports the following way(s) of running:
+## Build Docker Image of WebService
 
-Running example for IJM using JDT:
-`java -jar at.aau.softwaredynamics.runner-1.0-SNAPSHOT-jar-with-dependencies.jar -src ~/test/IJM/Test_old.java -dst ~/test/IJM/Test.java -c None -m IJM -w FS -g OTG`
+After building the whole project, move into the `softwaredynamics.diffws` folder.
+To build the the docker images the current **version** (e.g. 0.5.0) of the built webservice has to be provided 
+(You can check the version when you run ``ls ./target | grep '\<at.*jar\>$'``  and check the suffix of the .jar).
 
-Running example for IJM using Spoon:
-`java -jar at.aau.softwaredynamics.runner-1.0-SNAPSHOT-jar-with-dependencies.jar -src ~/test/IJM/Test_old.java -dst ~/test/IJM/Test.java -c Java -m IJM_Spoon -w FS -g SPOON`
+To build to image run following command, substituting ``<currentVersion>`` with your version:
 
-`-src` and `-dst` give the paths to the two files to compare
-`-m` defines the matcher
-`-w` defines the output (FS is file system - database is also possible but has to be set up)
-`-g` defines the tree generator.
+```
+$ docker build -t swdyn_ws --build-arg version=<currentVersion> .
+```
 
-If the tree generator is spoon the matcher has to be `-m IJM_Spoon` and the `-c` parameter has to be set to `-c Java`
-If the tree generator is otg (jdt based ijm) the matcher has to be `-m IJM` and the `-c` parameter has to be set to `-c None`
+
+
+
+### Running Docker Container
+
+To run a container from your image, run the following:
+
+```
+$ docker run -d -p 8080:8080 --name=swdyn_ws swdyn_ws
+
+```
+
+## Deploying
+
+To prepare for deployment build and push the project to the private registry:
+
+
+```
+docker build -t  swdyn-isys.aau.at:5000/tgrassau/swdyn_ws:<currentVersion> --build-arg version=<currentVersion> .
+docker push  swdyn-isys.aau.at:5000/tgrassau/swdyn_ws:<currentVersion>
+```

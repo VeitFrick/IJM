@@ -17,9 +17,7 @@
 .idea/**/libraries
 
 #lib folder
-lib/*
 !lib/*.jar
-
 
 # Mongo Explorer plugin:
 .idea/**/mongoSettings.xml

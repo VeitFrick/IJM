@@ -79,8 +79,9 @@ public class VirtualSpoonPom {
                 // fallback for default mvn structure if not defined
             else sourcePath = Paths.get(directory, "src", "main", "java").toString();
         }
-        if (sourcePath != null) output.add(sourcePath);
-
+        if (sourcePath != null){
+            output.add( sourcePath.replace("\\","/"));
+        }
         return output;
     }
 }
